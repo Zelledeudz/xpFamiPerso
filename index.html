@@ -84,7 +84,7 @@
             border: 1px solid #ddd;
             border-radius: 3px;
         }
-        .xp-per-kama, .quantity-1-80, .quantity-1-100 {
+        .xp-per-kama, .cost-1-80, .cost-1-100 {
             font-weight: bold;
             color: #27ae60;
         }
@@ -104,7 +104,7 @@
             <strong>Instructions :</strong>
             <ul>
                 <li>Remplissez la colonne "Prix" avec les prix actuels des ressources</li>
-                <li>Les colonnes "XP par Kama", "Quantité pour 1-80" et "Quantité pour 1-100" se calculent automatiquement</li>
+                <li>Les colonnes "Coût pour 1-80" et "Coût pour 1-100" se calculent automatiquement</li>
                 <li>Le calcul pour 1-80 utilise la valeur 80678 XP et pour 1-100 utilise 196159 XP</li>
                 <li>Vous pouvez télécharger le tableau en CSV ou Excel</li>
                 <li>Les prix sont synchronisés en temps réel entre tous les utilisateurs</li>
@@ -123,8 +123,8 @@
                         <th>Quantité d'expérience</th>
                         <th>Prix (Kamas)</th>
                         <th>XP par Kama</th>
-                        <th id="qtyHeader80">Quantité pour 1-80</th>
-                        <th id="qtyHeader100">Quantité pour 1-100</th>
+                        <th id="costHeader80">Coût pour 1-80</th>
+                        <th id="costHeader100">Coût pour 1-100</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
@@ -147,7 +147,7 @@
         // Initialize Firebase
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
-        // Données extraites du fichier CSV
+       // Données extraites du fichier CSV
          const resourcesData = [
             ["Galet brasillant", 1250, "", "", ""],
             ["Galet acajou", 1250, "", "", ""],
@@ -902,8 +902,8 @@
                     <td>${row[1]}</td>
                     <td><input type="number" class="price-input" onchange="calculateRow(${index})" placeholder="Prix..." step="0.01"></td>
                     <td class="xp-per-kama" id="xp-${index}">-</td>
-                    <td class="quantity-1-80" id="qty80-${index}">-</td>
-                    <td class="quantity-1-100" id="qty100-${index}">-</td>
+                    <td class="cost-1-80" id="cost80-${index}">-</td>
+                    <td class="cost-1-100" id="cost100-${index}">-</td>
                 `;
                 tableBody.appendChild(tr);
             });
@@ -912,24 +912,24 @@
         function calculateRow(index) {
             const priceInput = document.querySelector(`#tableBody tr:nth-child(${index + 1}) .price-input`);
             const xpCell = document.getElementById(`xp-${index}`);
-            const qty80Cell = document.getElementById(`qty80-${index}`);
-            const qty100Cell = document.getElementById(`qty100-${index}`);
+            const cost80Cell = document.getElementById(`cost80-${index}`);
+            const cost100Cell = document.getElementById(`cost100-${index}`);
             const price = parseFloat(priceInput.value);
             const xp = resourcesData[index][1];
             if (price && price > 0) {
                 const xpPerKama = xp / price;
-                const quantityFor80 = 80678 / xp;
-                const quantityFor100 = 196159 / xp;
+                const costFor80 = (80678 / xp) * price;
+                const costFor100 = (196159 / xp) * price;
                 xpCell.textContent = xpPerKama.toFixed(4);
-                qty80Cell.textContent = Math.ceil(quantityFor80).toLocaleString();
-                qty100Cell.textContent = Math.ceil(quantityFor100).toLocaleString();
+                cost80Cell.textContent = Math.ceil(costFor80).toLocaleString();
+                cost100Cell.textContent = Math.ceil(costFor100).toLocaleString();
                 // Sauvegarder dans Firebase
                 const priceRef = firebase.database().ref('prices/' + index);
                 priceRef.set(price);
             } else {
                 xpCell.textContent = '-';
-                qty80Cell.textContent = '-';
-                qty100Cell.textContent = '-';
+                cost80Cell.textContent = '-';
+                cost100Cell.textContent = '-';
                 // Supprimer de Firebase
                 const priceRef = firebase.database().ref('prices/' + index);
                 priceRef.remove();
@@ -944,18 +944,18 @@
                     Object.keys(prices).forEach(index => {
                         const priceInput = document.querySelector(`#tableBody tr:nth-child(${parseInt(index) + 1}) .price-input`);
                         const xpCell = document.getElementById(`xp-${index}`);
-                        const qty80Cell = document.getElementById(`qty80-${index}`);
-                        const qty100Cell = document.getElementById(`qty100-${index}`);
+                        const cost80Cell = document.getElementById(`cost80-${index}`);
+                        const cost100Cell = document.getElementById(`cost100-${index}`);
                         if (priceInput && priceInput.value != prices[index]) {
                             priceInput.value = prices[index];
                             const price = parseFloat(prices[index]);
                             const xp = resourcesData[index][1];
                             const xpPerKama = xp / price;
-                            const quantityFor80 = 80678 / xp;
-                            const quantityFor100 = 196159 / xp;
+                            const costFor80 = (80678 / xp) * price;
+                            const costFor100 = (196159 / xp) * price;
                             xpCell.textContent = xpPerKama.toFixed(4);
-                            qty80Cell.textContent = Math.ceil(quantityFor80).toLocaleString();
-                            qty100Cell.textContent = Math.ceil(quantityFor100).toLocaleString();
+                            cost80Cell.textContent = Math.ceil(costFor80).toLocaleString();
+                            cost100Cell.textContent = Math.ceil(costFor100).toLocaleString();
                         }
                     });
                 }
@@ -974,24 +974,24 @@
                 // Effacer les calculs
                 resourcesData.forEach((_, index) => {
                     document.getElementById(`xp-${index}`).textContent = '-';
-                    document.getElementById(`qty80-${index}`).textContent = '-';
-                    document.getElementById(`qty100-${index}`).textContent = '-';
+                    document.getElementById(`cost80-${index}`).textContent = '-';
+                    document.getElementById(`cost100-${index}`).textContent = '-';
                 });
             }
         }
         // Télécharger en CSV
         function downloadCSV() {
-            let csvContent = "Nom de la ressource,Quantité d'expérience,Prix,XP par Kama,Quantité pour 1-80,Quantité pour 1-100\n";
+            let csvContent = "Nom de la ressource,Quantité d'expérience,Prix,XP par Kama,Coût pour 1-80,Coût pour 1-100\n";
             resourcesData.forEach((row, index) => {
                 const priceInput = document.querySelector(`#tableBody tr:nth-child(${index + 1}) .price-input`);
                 const xpCell = document.getElementById(`xp-${index}`);
-                const qty80Cell = document.getElementById(`qty80-${index}`);
-                const qty100Cell = document.getElementById(`qty100-${index}`);
+                const cost80Cell = document.getElementById(`cost80-${index}`);
+                const cost100Cell = document.getElementById(`cost100-${index}`);
                 const price = priceInput.value || '';
                 const xpPerKama = xpCell.textContent === '-' ? '' : xpCell.textContent;
-                const quantity80 = qty80Cell.textContent === '-' ? '' : qty80Cell.textContent.replace(/,/g, '');
-                const quantity100 = qty100Cell.textContent === '-' ? '' : qty100Cell.textContent.replace(/,/g, '');
-                csvContent += `"${row[0]}",${row[1]},${price},${xpPerKama},${quantity80},${quantity100}\n`;
+                const cost80 = cost80Cell.textContent === '-' ? '' : cost80Cell.textContent.replace(/,/g, '');
+                const cost100 = cost100Cell.textContent === '-' ? '' : cost100Cell.textContent.replace(/,/g, '');
+                csvContent += `"${row[0]}",${row[1]},${price},${xpPerKama},${cost80},${cost100}\n`;
             });
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
@@ -1006,34 +1006,34 @@
         // Télécharger en Excel
         function downloadExcel() {
             const data = [
-                ["Nom de la ressource", "Quantité d'expérience", "Prix", "XP par Kama", "Quantité pour 1-80", "Quantité pour 1-100"]
+                ["Nom de la ressource", "Quantité d'expérience", "Prix", "XP par Kama", "Coût pour 1-80", "Coût pour 1-100"]
             ];
             resourcesData.forEach((row, index) => {
                 const priceInput = document.querySelector(`#tableBody tr:nth-child(${index + 1}) .price-input`);
                 const xpCell = document.getElementById(`xp-${index}`);
-                const qty80Cell = document.getElementById(`qty80-${index}`);
-                const qty100Cell = document.getElementById(`qty100-${index}`);
+                const cost80Cell = document.getElementById(`cost80-${index}`);
+                const cost100Cell = document.getElementById(`cost100-${index}`);
                 const price = priceInput.value ? parseFloat(priceInput.value) : '';
                 const xpPerKama = xpCell.textContent === '-' ? '' : parseFloat(xpCell.textContent);
-                const quantity80 = qty80Cell.textContent === '-' ? '' : parseInt(qty80Cell.textContent.replace(/,/g, ''));
-                const quantity100 = qty100Cell.textContent === '-' ? '' : parseInt(qty100Cell.textContent.replace(/,/g, ''));
-                data.push([row[0], row[1], price, xpPerKama, quantity80, quantity100]);
+                const cost80 = cost80Cell.textContent === '-' ? '' : parseInt(cost80Cell.textContent.replace(/,/g, ''));
+                const cost100 = cost100Cell.textContent === '-' ? '' : parseInt(cost100Cell.textContent.replace(/,/g, ''));
+                data.push([row[0], row[1], price, xpPerKama, cost80, cost100]);
             });
             const ws = XLSX.utils.aoa_to_sheet(data);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Ressources Dofus XP");
             XLSX.writeFile(wb, "ressources_dofus_xp.xlsx");
         }
-        // Trier le tableau par la colonne "Quantité pour 1-80"
+        // Trier le tableau par la colonne "Coût pour 1-80" ou "Coût pour 1-100"
         function sortTable(columnIndex) {
             const table = document.getElementById('resourcesTable');
             const tbody = document.getElementById('tableBody');
             const rows = Array.from(tbody.querySelectorAll('tr'));
 
             rows.sort((a, b) => {
-                const aQty = parseInt(a.querySelectorAll('td')[columnIndex].textContent.replace(/,/g, '')) || Infinity;
-                const bQty = parseInt(b.querySelectorAll('td')[columnIndex].textContent.replace(/,/g, '')) || Infinity;
-                return aQty - bQty;
+                const aCost = parseFloat(a.querySelectorAll('td')[columnIndex].textContent.replace(/,/g, '')) || Infinity;
+                const bCost = parseFloat(b.querySelectorAll('td')[columnIndex].textContent.replace(/,/g, '')) || Infinity;
+                return aCost - bCost;
             });
 
             // Supprimer les anciennes lignes
@@ -1048,8 +1048,8 @@
         window.onload = function() {
             createTable();
             listenToChanges();
-            document.getElementById('qtyHeader80').addEventListener('click', () => sortTable(4));
-            document.getElementById('qtyHeader100').addEventListener('click', () => sortTable(5));
+            document.getElementById('costHeader80').addEventListener('click', () => sortTable(4));
+            document.getElementById('costHeader100').addEventListener('click', () => sortTable(5));
         };
     </script>
 </body>
