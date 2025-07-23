@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ressources Dofus - Calculateur XP</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -96,7 +99,7 @@
 <body>
     <div class="container">
         <h1>🎮 Calculateur XP Ressources Dofus</h1>
-        
+
         <div class="info">
             <strong>Instructions :</strong>
             <ul>
@@ -104,15 +107,14 @@
                 <li>Les colonnes "XP par Kama" et "Quantité pour 1-80" se calculent automatiquement</li>
                 <li>Le calcul pour 1-80 utilise la valeur 80678 XP comme demandé</li>
                 <li>Vous pouvez télécharger le tableau en CSV ou Excel</li>
+                <li>Les prix sont synchronisés en temps réel entre tous les utilisateurs</li>
             </ul>
         </div>
-
         <div class="controls">
             <button onclick="downloadCSV()" class="download-csv">📥 Télécharger CSV</button>
             <button onclick="downloadExcel()">📊 Télécharger Excel</button>
             <button onclick="clearPrices()">🗑️ Effacer tous les prix</button>
         </div>
-
         <div class="table-container">
             <table id="resourcesTable">
                 <thead>
@@ -129,758 +131,62 @@
             </table>
         </div>
     </div>
-
     <script>
-        // Données extraites du fichier CSV (vos données sont déjà là)
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDTMFB4EqJdjryu582PtbVy2AD4RJsJre8",
+            authDomain: "dofus-calculator.firebaseapp.com",
+            projectId: "dofus-calculator",
+            storageBucket: "dofus-calculator.appspot.com",
+            messagingSenderId: "38115522441",
+            appId: "1:38115522441:web:cf71ca8b198e352bce8156",
+            measurementId: "G-BS8GJQ0MR6",
+            databaseURL: "https://dofus-calculator-default-rtdb.europe-west1.firebasedatabase.app/"
+        };
+
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Données extraites du fichier CSV
         const resourcesData = [
-         ["Galet brasillant", 1250, "", "", ""],
-            ["Galet acajou", 1250, "", "", ""],
-            ["Rune Ga Pa", 500, "", "", ""],
-            ["Rune Ga Pme", 405, "", "", ""],
-            ["Coeur Gelé", 375, "", "", ""],
-            ["Alliage Ivre", 375, "", "", ""],
-            ["Braguette de Nileza", 338, "", "", ""],
-            ["Culotte de Missiz Frizz", 338, "", "", ""],
-            ["Incisive de Sylargh", 338, "", "", ""],
-            ["Scalp de Klime", 338, "", "", ""],
-            ["Bandelette du Comte Harebourg", 338, "", "", ""],
-            ["Coeur de Merkator", 338, "", "", ""],
-            ["Poche de magma de Grasmera", 338, "", "", ""],
-            ["Galet Solaire", 313, "", "", ""],
-            ["Cuir Onique", 300, "", "", ""],
-            ["Encre du Kralamoure géant", 281, "", "", ""],
-            ["Hamatum de Glourséleste", 254, "", "", ""],
-            ["Condyle de Fuji Givrefoux", 254, "", "", ""],
-            ["Étoffe de Kolosso", 254, "", "", ""],
-            ["Étoffe givrée", 254, "", "", ""],
-            ["Eclat temporel", 254, "", "", ""],
-            ["Fermeture éclair", 200, "", "", ""],
-            ["Mycoses gelées", 200, "", "", ""],
-            ["Oeil de verre", 200, "", "", ""],
-            ["Racine cristalline", 200, "", "", ""],
-            ["Boulon neuf", 200, "", "", ""],
-            ["Oeil de Korriandre", 196, "", "", ""],
-            ["Fragment d'Ougalurette", 195, "", "", ""],
-            ["Peau du Bworker", 195, "", "", ""],
-            ["Vertèbre d'Obsidiantre", 161, "", "", ""],
-            ["Cuir de Tengu Givrefoux", 153, "", "", ""],
-            ["Rune Po", 130, "", "", ""],
-            ["Galet rutilant", 125, "", "", ""],
-            ["Galet boucané", 125, "", "", ""],
-            ["Sabot du Minotot", 120, "", "", ""],
-            ["Corne du Minotot", 120, "", "", ""],
-            ["Cuir du Minotot", 120, "", "", ""],
-            ["Laine du Minotot", 120, "", "", ""],
-            ["Fémur du Minotot", 120, "", "", ""],
-            ["Chaussette du Kimbo", 120, "", "", ""],
-            ["Pierre précieuse du Kimbo", 120, "", "", ""],
-            ["Scapula de Ben le Ripate", 116, "", "", ""],
-            ["Bézoard Ardent de Grozilla", 96, "", "", ""],
-            ["Étoffe de Sphincter Cell", 96, "", "", ""],
-            ["Bec de Dodox", 92, "", "", ""],
-            ["Sépale de Drosérâle", 92, "", "", ""],
-            ["Crinière de Krakal", 92, "", "", ""],
-            ["Molaire de Nessil", 92, "", "", ""],
-            ["Carapace de Termystique", 92, "", "", ""],
-            ["Moustache de Frimar", 92, "", "", ""],
-            ["Malleus de Karkanik", 92, "", "", ""],
-            ["Ethmoïde de Stalak", 92, "", "", ""],
-            ["Molaire de Ventrublion", 92, "", "", ""],
-            ["Cervelle de Verglasseur", 92, "", "", ""],
-            ["Queue de Brikoglours", 92, "", "", ""],
-            ["Griffe de Kanimate", 92, "", "", ""],
-            ["Sternum de Mansordide", 92, "", "", ""],
-            ["Oreille de Mécanofoux", 92, "", "", ""],
-            ["Pédoncule de Mérulor", 92, "", "", ""],
-            ["Dent de Cuirboule", 92, "", "", ""],
-            ["Coeur d'Empaillé", 92, "", "", ""],
-            ["Étoffe de Grodruche", 92, "", "", ""],
-            ["Cervelle de Peunch", 92, "", "", ""],
-            ["Plume de Cycloïde", 92, "", "", ""],
-            ["Bec de Granduk", 92, "", "", ""],
-            ["Pic du Nocturlabe", 92, "", "", ""],
-            ["Queue de Sinistrofu", 92, "", "", ""],
-            ["Bec de Strigide", 92, "", "", ""],
-            ["Oeuf de Gobus", 91, "", "", ""],
-            ["Oeuf du Mansot Royal", 90, "", "", ""],
-            ["Delko du Perkü", 88, "", "", ""],
-            ["Queue de Marôdeur", 78, "", "", ""],
-            ["Croc de Krokille", 78, "", "", ""],
-            ["Laine de Glouragan", 76, "", "", ""],
-            ["Étoffe de Glourmand", 76, "", "", ""],
-            ["Calcanéus de Meliglours", 76, "", "", ""],
-            ["Poil de Blérauve", 76, "", "", ""],
-            ["Oreille de Blérice", 76, "", "", ""],
-            ["Queue de Blérom", 76, "", "", ""],
-            ["Étoffe de Croleur", 76, "", "", ""],
-            ["Queue Magique du Péki", 76, "", "", ""],
-            ["Étoffe de Péki", 76, "", "", ""],
-            ["Ambre du Tynril", 76, "", "", ""],
-            ["Peau lacérée du Tynril", 76, "", "", ""],
-            ["Écorce du Tynril", 76, "", "", ""],
-            ["Ambre du Chêne Mou", 76, "", "", ""],
-            ["Bourgeon du Chêne Mou", 76, "", "", ""],
-            ["Oeil de Fleuro", 75, "", "", ""],
-            ["Manubrium de Wolvero", 69, "", "", ""],
-            ["Culotte de Harrogant", 68, "", "", ""],
-            ["Galet Lunaire", 63, "", "", ""],
-            ["Étoile d'Or d'El Piko", 60, "", "", ""],
-            ["Testicules du Tanukouï San", 60, "", "", ""],
-            ["Caleçon de Cybwork", 58, "", "", ""],
-            ["Cornée de Kami Givrefoux", 57, "", "", ""],
-            ["Queue du Royalmouth", 56, "", "", ""],
-            ["Lamelle de Champbis", 56, "", "", ""],
-            ["Langue du Champodonte", 56, "", "", ""],
-            ["Trompe de la Tromperelle", 56, "", "", ""],
-            ["Caleçon Blanc", 55, "", "", ""],
-            ["Caleçon Bleu", 55, "", "", ""],
-            ["Caleçon Rouge", 55, "", "", ""],
-            ["Caleçon Brun", 55, "", "", ""],
-            ["String en Cuir de la Mama Bwork", 54, "", "", ""],
-            ["Écorce de Champaknyde", 53, "", "", ""],
-            ["Broderie de la Reine des Voleurs", 51, "", "", ""],
-            ["Joyau de la couronne du roi Nidas", 51, "", "", ""],
-            ["Dé du Chaloeil", 51, "", "", ""],
-            ["Aile de Vortex", 51, "", "", ""],
-            ["Chaussette du Cyclophandre", 51, "", "", ""],
-            ["Pince de Krabouilleur", 51, "", "", ""],
-            ["Huile de Pikoleur", 51, "", "", ""],
-            ["Oeuf de Crapeur", 50, "", "", ""],
-            ["Peau de Skeunk", 48, "", "", ""],
-            ["Culotte à l'envers du Roissingue", 48, "", "", ""],
-            ["Racine d'Abrazif", 47, "", "", ""],
-            ["Oeil de Dramanite", 47, "", "", ""],
-            ["Oreille de Fistulor", 47, "", "", ""],
-            ["Pédoncule de Fongeur", 47, "", "", ""],
-            ["Pédoncule de Mérulette", 47, "", "", ""],
-            ["Coquille de Submergé", 47, "", "", ""],
-            ["Scarabée Chrysonéfritin", 47, "", "", ""],
-            ["Poil de Maître Pandore", 47, "", "", ""],
-            ["Peau de Maître Pandore", 47, "", "", ""],
-            ["Étoffe de Maître Pandore", 47, "", "", ""],
-            ["Cuir du Minotoror", 47, "", "", ""],
-            ["Sabot du Minotoror", 47, "", "", ""],
-            ["Fémur du Minotoror", 47, "", "", ""],
-            ["Corne Brûlée du Minotoror", 47, "", "", ""],
-            ["Téphra d'Atomystique", 46, "", "", ""],
-            ["Artefact de Fumrirolle", 46, "", "", ""],
-            ["Sang de Calciné", 46, "", "", ""],
-            ["Goulobule rouge", 46, "", "", ""],
-            ["Rune Invo", 45, "", "", ""],
-            ["Symbole des Obscuranti", 44, "", "", ""],
-            ["Chope de Bière", 43, "", "", ""],
-            ["Brûlâme encapsulé", 43, "", "", ""],
-            ["Poignée du Gorgouille", 43, "", "", ""],
-            ["Ulna de Solfataré", 39, "", "", ""],
-            ["Radius d'Ouilleur", 39, "", "", ""],
-            ["Iris de Boulglours", 38, "", "", ""],
-            ["Aile de Gloursaya", 38, "", "", ""],
-            ["Corne d'Ombre", 38, "", "", ""],
-            ["Peau du Rasboul Majeur", 37, "", "", ""],
-            ["Queue emplumée du Rasboul Majeur", 37, "", "", ""],
-            ["Oeil de Vigie Pirate", 36, "", "", ""],
-            ["Noeud de l'Abrakleur clair", 36, "", "", ""],
-            ["Moumoute du Sapeur", 35, "", "", ""],
-            ["Bouteille de Bouchonnois", 35, "", "", ""],
-            ["Vomer d'Apériglours", 34, "", "", ""],
-            ["Noyau de Protozorreur", 34, "", "", ""],
-            ["Sel de Baleine", 34, "", "", ""],
-            ["Epaulette de Dazak Martegel", 34, "", "", ""],
-            ["Queue de Bethel Akarna", 34, "", "", ""],
-            ["Patte de Gobosteur", 34, "", "", ""],
-            ["Borderie de Nileza", 34, "", "", ""],
-            ["Poil d'aisselle de Missiz Frizz", 34, "", "", ""],
-            ["Laine de Sylargh", 34, "", "", ""],
-            ["Plume d'Ilyzaelle", 34, "", "", ""],
-            ["Moustache de Klime", 34, "", "", ""],
-            ["Scapula du Comte Harebourg", 34, "", "", ""],
-            ["Cheveux de Tal Kasha", 34, "", "", ""],
-            ["Barbe de Merkator", 34, "", "", ""],
-            ["Broderie d'Eskoglyphe", 34, "", "", ""],
-            ["Poil de Meno", 34, "", "", ""],
-            ["Aile de Larve de Koutoulou", 34, "", "", ""],
-            ["Dentier de Dantinéa", 34, "", "", ""],
-            ["Pointe osseuse de Grasmera", 34, "", "", ""],
-            ["Cervelle de Solar", 33, "", "", ""],
-            ["Pic d'Anerice", 33, "", "", ""],
-            ["Coquille de Harpirate", 31, "", "", ""],
-            ["Huile de Fantimonier", 29, "", "", ""],
-            ["Sang du Toxoliath", 29, "", "", ""],
-            ["Slip troué de Dramak", 29, "", "", ""],
-            ["Pierre du Koulosse", 29, "", "", ""],
-            ["Testicules de Meulou", 29, "", "", ""],
-            ["Dents de Meulou", 29, "", "", ""],
-            ["Mojo du Meulou", 29, "", "", ""],
-            ["Testicules Magiques du Meulou", 29, "", "", ""],
-            ["Oeil de Meulou", 29, "", "", ""],
-            ["Crâne du Dragon Cochon", 29, "", "", ""],
-            ["Sang de Dragon Cochon", 29, "", "", ""],
-            ["Dragolait", 29, "", "", ""],
-            ["Queue de Dragon Cochon", 29, "", "", ""],
-            ["Défense de Dragon Cochon", 29, "", "", ""],
-            ["Poil de Dragon Cochon", 29, "", "", ""],
-            ["Étoffe Magique de Moon", 29, "", "", ""],
-            ["Étoffe de Meupette", 29, "", "", ""],
-            ["Bave de Champ à Gnons", 28, "", "", ""],
-            ["Oeil de Champmane", 28, "", "", ""],
-            ["Ventouse du Kralamoure géant", 28, "", "", ""],
-            ["Corde du Fancrôme", 27, "", "", ""],
-            ["Bouée de Fantomalamère", 27, "", "", ""],
-            ["Queue de Glourséleste", 25, "", "", ""],
-            ["Cuir de Fuji Givrefoux", 25, "", "", ""],
-            ["Griffe de Kolosso", 25, "", "", ""],
-            ["Poudre glaciale", 25, "", "", ""],
-            ["Fragment gelé", 25, "", "", ""],
-            ["Fausse dent de Grozilla", 25, "", "", ""],
-            ["Poils du Comte Razof", 25, "", "", ""],
-            ["Pilule de Rat Pine", 25, "", "", ""],
-            ["Pierre Angulaire", 24, "", "", ""],
-            ["Peau de Trithon", 24, "", "", ""],
-            ["Cuir de Maho Givrefoux", 23, "", "", ""],
-            ["Étoffe de Kaniglou", 23, "", "", ""],
-            ["Corne de XLII", 23, "", "", ""],
-            ["Parasite Aquatique", 23, "", "", ""],
-            ["Oreille du Fu Mansot", 22, "", "", ""],
-            ["Poche de charbon de Grasmera", 22, "", "", ""],
-            ["Étoffe de Choudini", 22, "", "", ""],
-            ["Bwak Squelettique", 22, "", "", ""],
-            ["Talon d'achille de l'Abrakleur sombre", 22, "", "", ""],
-            ["Bourgeon d'Abraknyde Ancestral", 22, "", "", ""],
-            ["Oeil de Branche Invocatrice", 22, "", "", ""],
-            ["Oeil de Branche Soignante", 22, "", "", ""],
-            ["Écorce de Floribonde", 21, "", "", ""],
-            ["Arête géante du Shamansot", 20, "", "", ""],
-            ["Crâne de Yokaï Givrefoux", 20, "", "", ""],
-            ["Patte de Korriandre", 20, "", "", ""],
-            ["Oeil torve de Fricochère", 20, "", "", ""],
-            ["Écorce de Brouture", 20, "", "", ""],
-            ["Écorce de Chiendent", 20, "", "", ""],
-            ["Écorce de Fécorce", 20, "", "", ""],
-            ["Écorce de Nerbe", 20, "", "", ""],
-            ["Mandibule d'Abrakne Irascible", 20, "", "", ""],
-            ["Épine d'Ougah", 19, "", "", ""],
-            ["Oeil d'Ougah", 19, "", "", ""],
-            ["Ongle du Bworker", 19, "", "", ""],
-            ["Arakne Irascible Écrasée", 19, "", "", ""],
-            ["Huile de Mamansot", 18, "", "", ""],
-            ["Patte de Soryo Givrefoux", 18, "", "", ""],
-            ["Moustache de Ush", 18, "", "", ""],
-            ["Coquille de Krokille", 18, "", "", ""],
-            ["Oeil de la Gardienne des Égouts", 18, "", "", ""],
-            ["Ambre d'Abraknyde Sombre Irascible", 18, "", "", ""],
-            ["Queue de Yomi Givrefoux", 17, "", "", ""],
-            ["Défense du Sanglacier", 17, "", "", ""],
-            ["Coeur du Mantiscore", 17, "", "", ""],
-            ["Coquille du Kaskargo", 17, "", "", ""],
-            ["Aile de Mansobèse", 16, "", "", ""],
-            ["Dent de Fantômat", 16, "", "", ""],
-            ["Scorie d'Obsidiantre", 16, "", "", ""],
-            ["Couche de Daïgoro", 16, "", "", ""],
-            ["Coco du Bitouf aérien", 16, "", "", ""],
-            ["Kristalite", 16, "", "", ""],
-            ["Queue du Boufmouth légendaire", 15, "", "", ""],
-            ["Laine de Tengu Givrefoux", 15, "", "", ""],
-            ["Oeil du Père Ver", 15, "", "", ""],
-            ["Étoffe de Maho Firefoux", 15, "", "", ""],
-            ["Tresse du Poolay", 15, "", "", ""],
-            ["Défense du Phossile", 14, "", "", ""],
-            ["Carapace de Ver des Sables", 14, "", "", ""],
-            ["Bec du Timansot", 13, "", "", ""],
-            ["Oeil de Boufmouth de guerre", 13, "", "", ""],
-            ["Gland de l'Ecumouth", 13, "", "", ""],
-            ["Galet Saisonnier", 13, "", "", ""],
-            ["Galet bistré", 13, "", "", ""],
-            ["Galet cramoisi", 13, "", "", ""],
-            ["Étoffe du Fauchalak", 13, "", "", ""],
-            ["Boomerang du Maître Koalak", 13, "", "", ""],
-            ["Poils de Barbe du Warko Violet", 13, "", "", ""],
-            ["Étoffe de Fantôme Léopardo", 13, "", "", ""],
-            ["Étoffe de Fantôme Maho Firefoux", 13, "", "", ""],
-            ["Étoffe de Fantôme Pandikaze", 13, "", "", ""],
-            ["Étoffe de Fantôme Pandore", 13, "", "", ""],
-            ["Étoffe de Fantôme Pandule", 13, "", "", ""],
-            ["Étoffe de Fantôme Soryo Firefoux", 13, "", "", ""],
-            ["Étoffe de Fantôme Tanukouï San", 13, "", "", ""],
-            ["Étoffe de Fantôme Yokai Firefoux", 13, "", "", ""],
-            ["Poil de Ben le Ripate", 12, "", "", ""],
-            ["Dent de Smilomouth", 12, "", "", ""],
-            ["Griffe de Buboxor", 12, "", "", ""],
-            ["Oeil de Harpille", 12, "", "", ""],
-            ["Serre d'Ikargn", 12, "", "", ""],
-            ["Corne de Méjaire", 12, "", "", ""],
-            ["Fémur de Koalak Farouche", 12, "", "", ""],
-            ["Fiole de fumée de Nelween", 12, "", "", ""],
-            ["Méga Pierre du Craqueleur Légendaire", 12, "", "", ""],
-            ["Ethmoïde du Minotot", 12, "", "", ""],
-            ["Corne de Mominotor", 12, "", "", ""],
-            ["Corne de Scaratos", 12, "", "", ""],
-            ["Sphénoïde du Kimbo", 12, "", "", ""],
-            ["Perruque du Kimbo", 12, "", "", ""],
-            ["Pourdre explosive de Gourlo", 12, "", "", ""],
-            ["Clavicule de Boufmouth", 11, "", "", ""],
-            ["Peau de Chevaucheur Koalak", 11, "", "", ""],
-            ["Boomerang du Koalak Sanguin", 11, "", "", ""],
-            ["Queue de Koalak Sanguin", 11, "", "", ""],
-            ["Plume du Mansot Royal", 10, "", "", ""],
-            ["Aquarakne de Crânonier", 10, "", "", ""],
-            ["Protection de Funespadon", 10, "", "", ""],
-            ["Bout d'Armure de Macrab", 10, "", "", ""],
-            ["Pointe de Lance de Tournoyé", 10, "", "", ""],
-            ["Chair de Zombruth", 10, "", "", ""],
-            ["Crâne magique de Magouille", 10, "", "", ""],
-            ["Boule en or de Piloztère", 10, "", "", ""],
-            ["Plume du Cavalier", 10, "", "", ""],
-            ["Sceau du Roi Joueur", 10, "", "", ""],
-            ["Pique du Soldat", 10, "", "", ""],
-            ["Gilet du Valet", 10, "", "", ""],
-            ["Plume de Brabuzar", 10, "", "", ""],
-            ["Dent de Bandleth", 10, "", "", ""],
-            ["Fragment de Chakanoubis", 10, "", "", ""],
-            ["Oreille de Griffotep", 10, "", "", ""],
-            ["Grenat de Momistik", 10, "", "", ""],
-            ["Paupière Dorée de Rykaon", 10, "", "", ""],
-            ["Sang de Harpo", 10, "", "", ""],
-            ["Dent de Tilamproie", 10, "", "", ""],
-            ["Flûte de Klûtiste", 10, "", "", ""],
-            ["Épine de Diondin", 10, "", "", ""],
-            ["Épine Dorsale de Grozilla", 10, "", "", ""],
-            ["Place de Concert de Diamantine", 10, "", "", ""],
-            ["Journal Intime d'Émeraude", 10, "", "", ""],
-            ["Pense-bête de Rubise", 10, "", "", ""],
-            ["Shampooing au Kaliptus de Saphira", 10, "", "", ""],
-            ["Peau de Sphincter Cell", 10, "", "", ""],
-            ["Oreille de Sphincter Cell", 10, "", "", ""],
-            ["Fémur de Sphincter Cell", 10, "", "", ""],
-            ["Langue de Hacharné", 10, "", "", ""],
-            ["Oeil de Halbardent", 10, "", "", ""],
-            ["Dent de Klémort", 10, "", "", ""],
-            ["Grenade de Moribombe", 10, "", "", ""],
-            ["Vertèbre de Trépavois", 10, "", "", ""],
-            ["Ongle de Goulafre", 10, "", "", ""],
-            ["Oeil de Gouligane", 10, "", "", ""],
-            ["Poils de Goultime", 10, "", "", ""],
-            ["Aile de Kérigoule", 10, "", "", ""],
-            ["Nez de Pipisteuse", 10, "", "", ""],
-            ["Trompe de Minoskito", 10, "", "", ""],
-            ["Bâton du Kilibriss", 10, "", "", ""],
-            ["Poils de barbe de Barbélier", 9, "", "", ""],
-            ["Fronde de Boufbos", 9, "", "", ""],
-            ["Jambière de Kasrok", 9, "", "", ""],
-            ["Armure de Tanklume", 9, "", "", ""],
-            ["Dent de Vatenbière", 9, "", "", ""],
-            ["Fragment de pépite de Sakaï", 9, "", "", ""],
-            ["Pierre du Courtilieur", 9, "", "", ""],
-            ["Bois de Gobus", 9, "", "", ""],
-            ["Estomac du Perkü", 9, "", "", ""],
-            ["Plume de Dodox", 9, "", "", ""],
-            ["Bracée de Drosérâle", 9, "", "", ""],
-            ["Canine de Krakal", 9, "", "", ""],
-            ["Bave de Nessil", 9, "", "", ""],
-            ["Patte de Termystique", 9, "", "", ""],
-            ["Stapes de Frimar", 9, "", "", ""],
-            ["Sang de Karkanik", 9, "", "", ""],
-            ["Incisive de Stalak", 9, "", "", ""],
-            ["Sang de Ventrublion", 9, "", "", ""],
-            ["Incus de Verglasseur", 9, "", "", ""],
-            ["Maxillaire de Brikoglours", 9, "", "", ""],
-            ["Canine de Kanimate", 9, "", "", ""],
-            ["Bec de Mansordide", 9, "", "", ""],
-            ["Astragale de Mécanofoux", 9, "", "", ""],
-            ["Volve de Mérulor", 9, "", "", ""],
-            ["Cendres de Chause", 9, "", "", ""],
-            ["Pince de Crâme", 9, "", "", ""],
-            ["Fragment d'Ectorche", 9, "", "", ""],
-            ["Restes d'Esprigné", 9, "", "", ""],
-            ["Oeil de Feutôme", 9, "", "", ""],
-            ["Cuir de Cuirboule", 9, "", "", ""],
-            ["Cuir d'Empaillé", 9, "", "", ""],
-            ["Cuir de Grodruche", 9, "", "", ""],
-            ["Oeil de Harrogant", 9, "", "", ""],
-            ["Cuir de Peunch", 9, "", "", ""],
-            ["Oeil de Cycloïde", 9, "", "", ""],
-            ["Plume de Granduk", 9, "", "", ""],
-            ["Aile de Nocturlabe", 9, "", "", ""],
-            ["Aile de Sinistrofu", 9, "", "", ""],
-            ["Griffe de Strigide", 9, "", "", ""],
-            ["Coeur du Capitaine Ekarlatte", 9, "", "", ""],
-            ["Masque de la Violence", 9, "", "", ""],
-            ["Masque de la Vivacité", 9, "", "", ""],
-            ["Masque du Vide", 9, "", "", ""],
-            ["Masque de la Vengeance", 9, "", "", ""],
-            ["Masque du Vice", 9, "", "", ""],
-            ["Jus de Cacterre", 9, "", "", ""],
-            ["Étoffe de Soryo Firefoux", 9, "", "", ""],
-            ["Lait de Porsalu", 9, "", "", ""],
-            ["Coco du Bitouf des Plaines", 9, "", "", ""],
-            ["Coeur de pierre poli", 9, "", "", ""],
-            ["Bec du Kido", 9, "", "", ""],
-            ["Crinière fleurie", 9, "", "", ""],
-            ["Cuir de Glouragan", 8, "", "", ""],
-            ["Incisive de Glourmand", 8, "", "", ""],
-            ["Queue de Meliglours", 8, "", "", ""],
-            ["Cuir de Bouftonmouth", 8, "", "", ""],
-            ["Tuf de Mofette", 8, "", "", ""],
-            ["Griffe de Blérauve", 8, "", "", ""],
-            ["Molaire de Blérice", 8, "", "", ""],
-            ["Omoplate de Blérom", 8, "", "", ""],
-            ["Oreille de Croleur", 8, "", "", ""],
-            ["Péroné du Marôdeur", 8, "", "", ""],
-            ["Rune Pa Ré Pa", 8, "", "", ""],
-            ["Rune Pa Ré Pme", 8, "", "", ""],
-            ["Rune Pa Ret Pa", 8, "", "", ""],
-            ["Rune Pa Ret Pme", 8, "", "", ""],
-            ["Éclat Obscur", 8, "", "", ""],
-            ["Boue Vénérable", 8, "", "", ""],
-            ["Flaque Vénérable", 8, "", "", ""],
-            ["Cendres Vénérables", 8, "", "", ""],
-            ["Poudre Vénérable", 8, "", "", ""],
-            ["Fumée Vénérable", 8, "", "", ""],
-            ["Oreille de Bouledogre", 8, "", "", ""],
-            ["Élastique de Gobvious", 8, "", "", ""],
-            ["Corne de Rhinoféroce", 8, "", "", ""],
-            ["Bave de Brokouillon", 8, "", "", ""],
-            ["Queue de Chevrotine", 8, "", "", ""],
-            ["Flèche de Crâmbo", 8, "", "", ""],
-            ["Os de Nemroz", 8, "", "", ""],
-            ["Sang de Viandargh", 8, "", "", ""],
-            ["Coiffe déchiquetée de Drakoalak", 8, "", "", ""],
-            ["Os de Mama Koalak", 8, "", "", ""],
-            ["Cervelle de Bouftou des Cavernes", 8, "", "", ""],
-            ["Testicules de Cocholou", 8, "", "", ""],
-            ["Mojo de Mergranlou", 8, "", "", ""],
-            ["Testicules Magiques de Muloubard", 8, "", "", ""],
-            ["Scalp de Mulounoké", 8, "", "", ""],
-            ["Corne de Déminoboule", 8, "", "", ""],
-            ["Pierre de Serpiplume", 8, "", "", ""],
-            ["Cagoule du Kanniboul Ebil", 8, "", "", ""],
-            ["Boule polie", 8, "", "", ""],
-            ["Tibia du Guerrier Zoth", 8, "", "", ""],
-            ["Braguette du Maître Zoth", 8, "", "", ""],
-            ["Écusson du Sergent Zoth", 8, "", "", ""],
-            ["Antenne de Bacterrib", 7, "", "", ""],
-            ["Patte de Tabacille", 7, "", "", ""],
-            ["Oeil de Verminocule", 7, "", "", ""],
-            ["Coquille de Virustine", 7, "", "", ""],
-            ["Oreille de Fleuro", 7, "", "", ""],
-            ["Queue de Wolvero", 7, "", "", ""],
-            ["Pixel de Fraktale", 7, "", "", ""],
-            ["Poil de Péki", 7, "", "", ""],
-            ["Étoffe de Yokai Firefoux", 7, "", "", ""],
-            ["Étoffe de Pandore", 7, "", "", ""],
-            ["Calice du Tynril", 7, "", "", ""],
-            ["Pistil du Tynril", 7, "", "", ""],
-            ["Rotule du Disciple Zoth", 7, "", "", ""],
-            ["Écorce du Chêne Mou", 7, "", "", ""],
-            ["Racine du Chêne Mou", 7, "", "", ""],
-            ["Laine du Royalmouth", 6, "", "", ""],
-            ["Coeur de Crapeur", 6, "", "", ""],
-            ["Pierre de Mofette", 6, "", "", ""],
-            ["Incisive de Kami Givrefoux", 6, "", "", ""],
-            ["Écorce d'Abrazif", 6, "", "", ""],
-            ["Lamelle de Dramanite", 6, "", "", ""],
-            ["Volve de Fistulor", 6, "", "", ""],
-            ["Volve de Fongeur", 6, "", "", ""],
-            ["Lamelle de Mérulette", 6, "", "", ""],
-            ["Glande du Pounicheur", 6, "", "", ""],
-            ["Barbe de Seith", 6, "", "", ""],
-            ["Pagne de Trantroa", 6, "", "", ""],
-            ["Dent de Trezz", 6, "", "", ""],
-            ["Peau de Vindeux", 6, "", "", ""],
-            ["Venin d'Éperfide", 6, "", "", ""],
-            ["Pince de Lucrane", 6, "", "", ""],
-            ["Dard de Morfrelon", 6, "", "", ""],
-            ["Aile de Puceronde", 6, "", "", ""],
-            ["Patte de Scoliopode", 6, "", "", ""],
-            ["Relique du Kimbo", 6, "", "", ""],
-            ["Picot d'El Piko", 6, "", "", ""],
-            ["Avoine Magique", 6, "", "", ""],
-            ["Peau de Roukouto", 6, "", "", ""],
-            ["Peau de Tivelo", 6, "", "", ""],
-            ["Poils de Tanukouï San", 6, "", "", ""],
-            ["Peau de Tanukouï San", 6, "", "", ""],
-            ["Triquetrum du Maître Pandore", 6, "", "", ""],
-            ["Poil de Bworkette", 6, "", "", ""],
-            ["Étoffe Corailleuse", 6, "", "", ""],
-            ["Corail Magistral", 6, "", "", ""],
-            ["Toile d'Abrakne Sombre", 6, "", "", ""],
-            ["Pierre d'Atomystique", 5, "", "", ""],
-            ["Pierre de Fumrirolle", 5, "", "", ""],
-            ["Rune Cri", 5, "", "", ""],
-            ["Rune Pa So", 5, "", "", ""],
-            ["Rune So", 5, "", "", ""],
-            ["Épaulette de Bourôliste", 5, "", "", ""],
-            ["Chouchou de Doublure", 5, "", "", ""],
-            ["Piège désamorcé de Mâchassin", 5, "", "", ""],
-            ["Mèche de bombe de Terristocrate", 5, "", "", ""],
-            ["Sourcil de Barbétoal", 5, "", "", ""],
-            ["Corne de Kamasterik", 5, "", "", ""],
-            ["Dent de Lévitrof", 5, "", "", ""],
-            ["Morceau de clef de Paspartou", 5, "", "", ""],
-            ["Touffe de cheveux de Soissanth", 5, "", "", ""],
-            ["Relique du Tynril", 5, "", "", ""],
-            ["Pic de Pikténia", 5, "", "", ""],
-            ["Ceinture de la Dame", 5, "", "", ""],
-            ["Barbe du Cyclophandre", 5, "", "", ""],
-            ["Carapace de Krabouilleur", 5, "", "", ""],
-            ["Pic de Pikoleur", 5, "", "", ""],
-            ["Queue de Mantaze", 5, "", "", ""],
-            ["Patte de Li-Fo", 5, "", "", ""],
-            ["Moustache de Rilur", 5, "", "", ""],
-            ["Oeil de Krokille", 5, "", "", ""],
-            ["Bandelette du Guerrier Koalak", 5, "", "", ""],
-            ["Poil de Skeunk", 5, "", "", ""],
-            ["Écorce de Liroye Merline", 5, "", "", ""],
-            ["Bandeau troué d'Air", 5, "", "", ""],
-            ["Bandeau troué d'Eau", 5, "", "", ""],
-            ["Bandeau troué de Feu", 5, "", "", ""],
-            ["Bandeau troué de Terre", 5, "", "", ""],
-            ["Boulon de Cybwork", 5, "", "", ""],
-            ["Furoncle de la Mama Bwork", 5, "", "", ""],
-            ["Tourbe séchée de Tourbassingue", 5, "", "", ""],
-            ["Poils de Boulglours", 4, "", "", ""],
-            ["Antenne de Gloursaya", 4, "", "", ""],
-            ["Étoffe de Vigie Pirate", 4, "", "", ""],
-            ["Résidu de Solfataré", 4, "", "", ""],
-            ["Peau d'Ouilleur", 4, "", "", ""],
-            ["Rune Pa Do Air", 4, "", "", ""],
-            ["Rune Pa Do Cri", 4, "", "", ""],
-            ["Rune Pa Do Eau", 4, "", "", ""],
-            ["Rune Pa Do Feu", 4, "", "", ""],
-            ["Rune Pa Do Neutre", 4, "", "", ""],
-            ["Rune Pa Do Pou", 4, "", "", ""],
-            ["Rune Pa Do Terre", 4, "", "", ""],
-            ["Rune Pa Fui", 4, "", "", ""],
-            ["Rune Pa Pi", 4, "", "", ""],
-            ["Rune Pa Tac", 4, "", "", ""],
-            ["Rune Ra Sa", 4, "", "", ""],
-            ["Broderie de Malléfisk", 4, "", "", ""],
-            ["Poil de Chacrebleu", 4, "", "", ""],
-            ["Collier de Chakichan", 4, "", "", ""],
-            ["Oreille de Chargus", 4, "", "", ""],
-            ["Queue de Chasquatch", 4, "", "", ""],
-            ["Dent de Rat Blanc", 4, "", "", ""],
-            ["Étoffe de Rat Blanc", 4, "", "", ""],
-            ["Peau de Rat Blanc", 4, "", "", ""],
-            ["Peau de Rat Noir", 4, "", "", ""],
-            ["Cubitus de Rat Noir", 4, "", "", ""],
-            ["Étoffe de Rat Noir", 4, "", "", ""],
-            ["Fragment du Gorgouille", 4, "", "", ""],
-            ["Laine du Minotoror", 4, "", "", ""],
-            ["Poils du Minotoror", 4, "", "", ""],
-            ["Kole", 4, "", "", ""],
-            ["Faux menton du Bourbassingue", 4, "", "", ""],
-            ["Étoffe du Roissingue", 4, "", "", ""],
-            ["Oreille d'Apériglours", 3, "", "", ""],
-            ["Sternum de Chachachovage", 3, "", "", ""],
-            ["Bec de Gélikan", 3, "", "", ""],
-            ["Patte de Rat Bougri", 3, "", "", ""],
-            ["Pince du Fancrôme", 3, "", "", ""],
-            ["Coquille de Fantimonier", 3, "", "", ""],
-            ["Queue de Fantomalamère", 3, "", "", ""],
-            ["Mât de Fantômat", 3, "", "", ""],
-            ["Écaille de Harpirate", 3, "", "", ""],
-            ["Oreille de Gobosteur", 3, "", "", ""],
-            ["Oeil de Sapeur", 3, "", "", ""],
-            ["Rune Ré Pa", 3, "", "", ""],
-            ["Rune Ré Per Air", 3, "", "", ""],
-            ["Rune Ré Per Eau", 3, "", "", ""],
-            ["Rune Ré Per Feu", 3, "", "", ""],
-            ["Rune Ré Per Neutre", 3, "", "", ""],
-            ["Rune Ré Per Terre", 3, "", "", ""],
-            ["Rune Ré Pme", 3, "", "", ""],
-            ["Rune Ret Pa", 3, "", "", ""],
-            ["Rune Ret Pme", 3, "", "", ""],
-            ["Biscuit de chance", 3, "", "", ""],
-            ["Sablier miniature", 3, "", "", ""],
-            ["Queue de Mère Veilleuse", 3, "", "", ""],
-            ["Peau de Métaphorreur", 3, "", "", ""],
-            ["Corne de Père Phorreur", 3, "", "", ""],
-            ["Griffe de Phorrêveur", 3, "", "", ""],
-            ["Oeil de Phozami", 3, "", "", ""],
-            ["Relique du Rasboul Majeur", 3, "", "", ""],
-            ["Sable Fin", 3, "", "", ""],
-            ["Cuir d'Eskoglyphe", 3, "", "", ""],
-            ["Pince de Crabe Yoloniste", 3, "", "", ""],
-            ["Écaille de Gambaf", 3, "", "", ""],
-            ["Bave de Mol Usk", 3, "", "", ""],
-            ["Tentacule de Grofond", 3, "", "", ""],
-            ["Tentacule de N'Yalg", 3, "", "", ""],
-            ["Oeil de Shokkoth", 3, "", "", ""],
-            ["Encre de Poulpée", 3, "", "", ""],
-            ["Lanterne de Tourthon", 3, "", "", ""],
-            ["Trident de Tryde", 3, "", "", ""],
-            ["Chaussette trouée de Dramak", 3, "", "", ""],
-            ["Poils de Barbe de Dragodinde", 3, "", "", ""],
-            ["Tresse du Koulosse", 3, "", "", ""],
-            ["Oeil de Crowneille", 3, "", "", ""],
-            ["Kolérat Mort", 3, "", "", ""],
-            ["Collier Cassé de Macien", 3, "", "", ""],
-            ["Viscères de Scorbute", 3, "", "", ""],
-            ["Racine Magique de Bambouto Sacré", 3, "", "", ""],
-            ["Noeud de Marin", 3, "", "", ""],
-            ["Souche de l'Abrakleur clair", 3, "", "", ""],
-            ["Barbe inexistante du Barbroussa", 3, "", "", ""],
-            ["Touffe rousse du Flib", 3, "", "", ""],
-            ["Humérus du Sparo", 3, "", "", ""],
-            ["Sourcil du Rasboul majeur", 3, "", "", ""],
-            ["Plume du Rasboul Majeur", 3, "", "", ""],
-            ["Queue du Fu Mansot", 2, "", "", ""],
-            ["Duvet de Mamansot", 2, "", "", ""],
-            ["Peau de Mansobèse", 2, "", "", ""],
-            ["Poil de barbe du Shamansot", 2, "", "", ""],
-            ["Laine de Boufmouth légendaire", 2, "", "", ""],
-            ["Oeil de Crabe Hijacob", 2, "", "", ""],
-            ["Peau de Pataugerme", 2, "", "", ""],
-            ["Larme de Givrefoux", 2, "", "", ""],
-            ["Laine de Maho Givrefoux", 2, "", "", ""],
-            ["Oreille de Soryo Givrefoux", 2, "", "", ""],
-            ["Laine de Yokaï Givrefoux", 2, "", "", ""],
-            ["Malléole de Yomi Givrefoux", 2, "", "", ""],
-            ["Oreille percée du Fricochère", 2, "", "", ""],
-            ["Oreille de Kaniglou", 2, "", "", ""],
-            ["Cuir du Sanglacier", 2, "", "", ""],
-            ["Rune Ra Pi Per", 2, "", "", ""],
-            ["Rune Ra Pui", 2, "", "", ""],
-            ["Tête de mort", 2, "", "", ""],
-            ["Kamatrix", 2, "", "", ""],
-            ["Slip d'Elsoummo", 2, "", "", ""],
-            ["Sacoche de Kartouche", 2, "", "", ""],
-            ["Foulard de Milimaître", 2, "", "", ""],
-            ["Os de Sramouraï", 2, "", "", ""],
-            ["Bandelette de Tromblion", 2, "", "", ""],
-            ["Dent de Chakaroze", 2, "", "", ""],
-            ["Pixel de Brikablak", 2, "", "", ""],
-            ["Pixel d'Éklatleth", 2, "", "", ""],
-            ["Pixel de Farfacette", 2, "", "", ""],
-            ["Pixel de Gromorso", 2, "", "", ""],
-            ["Relique de Gourlo le Terrible", 2, "", "", ""],
-            ["Carapace du Mantiscore", 2, "", "", ""],
-            ["Parchemin de Cactana", 2, "", "", ""],
-            ["Fleur de Cactiflore", 2, "", "", ""],
-            ["Moustaches de Cactoblongo", 2, "", "", ""],
-            ["Maraca de Lévito", 2, "", "", ""],
-            ["String de Pampactus", 2, "", "", ""],
-            ["Dent de Cycloporth", 2, "", "", ""],
-            ["Patte de Masticroc", 2, "", "", ""],
-            ["Langue de Morsquale", 2, "", "", ""],
-            ["Peau de Trémorse", 2, "", "", ""],
-            ["Écaille de Grasmera", 2, "", "", ""],
-            ["Écaille de Grozilla", 2, "", "", ""],
-            ["Boue Mature", 2, "", "", ""],
-            ["Flaque Mature", 2, "", "", ""],
-            ["Cendres Matures", 2, "", "", ""],
-            ["Poudre Mature", 2, "", "", ""],
-            ["Fumée Mature", 2, "", "", ""],
-            ["Peau de Koalak Immature", 2, "", "", ""],
-            ["Boomerang du Warko Marron", 2, "", "", ""],
-            ["Patte de la Gardienne des Égouts", 2, "", "", ""],
-            ["Oeil de Rat Masseur", 2, "", "", ""],
-            ["Queue de Rat Pine", 2, "", "", ""],
-            ["Poil de Rat Brâkmarien", 2, "", "", ""],
-            ["Fibre de Chanvre", 2, "", "", ""],
-            ["Faux Visage de Choudini", 2, "", "", ""],
-            ["Pommeau d'Epée", 2, "", "", ""],
-            ["Scalp de Meulou", 2, "", "", ""],
-            ["Étoffe du Mulou", 2, "", "", ""],
-            ["Poils de Kitsou Nufeu", 2, "", "", ""],
-            ["Groin de Dragon Cochon", 2, "", "", ""],
-            ["Poils de Moon", 2, "", "", ""],
-            ["Peau de Moon", 2, "", "", ""],
-            ["Barbe du Chouque", 2, "", "", ""],
-            ["Rembourrage de Meupette", 2, "", "", ""],
-            ["Carpelle de Brouture", 2, "", "", ""],
-            ["Graine de l'Abrakleur sombre", 2, "", "", ""],
-            ["Bractée de Chiendent", 2, "", "", ""],
-            ["Calice de Fécorce", 2, "", "", ""],
-            ["Étamine de Floribonde", 2, "", "", ""],
-            ["Sépale de Nerbe", 2, "", "", ""],
-            ["Racine d'Abraknyde Ancestral", 2, "", "", ""],
-            ["Ambre Ancestral", 2, "", "", ""],
-            ["Écorce d'Abraknyde Ancestral", 2, "", "", ""],
-            ["Bois Envoûté", 2, "", "", ""],
-            ["Patte d'Abrakne Irascible", 2, "", "", ""],
-            ["Doigt de Branche Invocatrice", 2, "", "", ""],
-            ["Feuille de Branche Soignante", 2, "", "", ""],
-            ["Plume du Timansot", 1, "", "", ""],
-            ["Laine de Boufmouth", 1, "", "", ""],
-            ["Corne de Boufmouth de guerre", 1, "", "", ""],
-            ["Oreille de Bouftonmouth", 1, "", "", ""],
-            ["Poil de Chachachovage", 1, "", "", ""],
-            ["Pince de Crabe Hijacob", 1, "", "", ""],
-            ["Plume de Gélikan", 1, "", "", ""],
-            ["Étoffe de Rat Bougri", 1, "", "", ""],
-            ["Queue d'Ecumouth", 1, "", "", ""],
-            ["Poil de Smilomouth", 1, "", "", ""],
-            ["Rune Age", 1, "", "", ""],
-            ["Rune Cha", 1, "", "", ""],
-            ["Rune de chasse", 1, "", "", ""],
-            ["Rune Do", 1, "", "", ""],
-            ["Rune Do Air", 1, "", "", ""],
-            ["Rune Do Cri", 1, "", "", ""],
-            ["Rune Do Eau", 1, "", "", ""],
-            ["Rune Do Feu", 1, "", "", ""],
-            ["Rune Do Neutre", 1, "", "", ""],
-            ["Rune Do Per Ar", 1, "", "", ""],
-            ["Rune Do Per Di", 1, "", "", ""],
-            ["Rune Do Per Mé", 1, "", "", ""],
-            ["Rune Do Per So", 1, "", "", ""],
-            ["Rune Do Pou", 1, "", "", ""],
-            ["Rune Do Ren", 1, "", "", ""],
-            ["Rune Do Terre", 1, "", "", ""],
-            ["Rune Fo", 1, "", "", ""],
-            ["Rune Fui", 1, "", "", ""],
-            ["Rune Ine", 1, "", "", ""],
-            ["Rune Ini", 1, "", "", ""],
-            ["Rune Pa Age", 1, "", "", ""],
-            ["Rune Pa Cha", 1, "", "", ""],
-            ["Rune Pa Fo", 1, "", "", ""],
-            ["Rune Pa Ine", 1, "", "", ""],
-            ["Rune Pa Ini", 1, "", "", ""],
-            ["Rune Pa Pi Per", 1, "", "", ""],
-            ["Rune Pa Pod", 1, "", "", ""],
-            ["Rune Pa Prospe", 1, "", "", ""],
-            ["Rune Pa Pui", 1, "", "", ""],
-            ["Rune Pa Ré Air", 1, "", "", ""],
-            ["Rune Pa Ré Cri", 1, "", "", ""],
-            ["Rune Pa Ré Eau", 1, "", "", ""],
-            ["Rune Pa Ré Feu", 1, "", "", ""],
-            ["Rune Pa Ré Neutre", 1, "", "", ""],
-            ["Rune Pa Ré Pou", 1, "", "", ""],
-            ["Rune Pa Ré Terre", 1, "", "", ""],
-            ["Rune Pa Sa", 1, "", "", ""],
-            ["Rune Pa Vi", 1, "", "", ""],
-            ["Rune Pi", 1, "", "", ""],
-            ["Rune Pi Per", 1, "", "", ""],
-            ["Rune Pod", 1, "", "", ""],
-            ["Rune Prospe", 1, "", "", ""],
-            ["Rune Pui", 1, "", "", ""],
-            ["Rune Ra Age", 1, "", "", ""],
-            ["Rune Ra Cha", 1, "", "", ""],
-            ["Rune Ra Fo", 1, "", "", ""],
-            ["Rune Ra Ine", 1, "", "", ""],
-            ["Rune Ra Ini", 1, "", "", ""],
-            ["Rune Ra Pod", 1, "", "", ""],
-            ["Rune Ra Vi", 1, "", "", ""],
-            ["Rune Ré Air", 1, "", "", ""],
-            ["Rune Ré Cri", 1, "", "", ""],
-            ["Rune Ré Eau", 1, "", "", ""],
-            ["Rune Ré Feu", 1, "", "", ""],
-            ["Rune Ré Neutre", 1, "", "", ""],
-            ["Rune Ré Per Di", 1, "", "", ""],
-            ["Rune Ré Per Mé", 1, "", "", ""],
-            ["Rune Ré Pou", 1, "", "", ""],
-            ["Rune Ré Terre", 1, "", "", ""],
-            ["Rune Sa", 1, "", "", ""],
-            ["Rune Tac", 1, "", "", ""],
-            ["Rune Vi", 1, "", "", ""],
-            ["Pépite", 1.25, "", "", ""],
-            ["Rose des sables", 1.25, "", "", ""]
+            ["Galet brasillant", 1250, 1],
+            ["Galet acajou", 1250, 1],
+            ["Rune Ga Pa", 500, 1],
+            ["Rune Ga Pme", 405, 1],
+            ["Coeur Gelé", 375, 1],
+            ["Alliage Ivre", 375, 1],
+            ["Braguette de Nileza", 338, 1],
+            ["Culotte de Missiz Frizz", 338, 1],
+            ["Incisive de Sylargh", 338, 1],
+            ["Scalp de Klime", 338, 1],
+            ["Bandelette du Comte Harebourg", 338, 1],
+            ["Coeur de Merkator", 338, 1],
+            ["Poche de magma de Grasmera", 338, 1],
+            ["Galet Solaire", 313, 1],
+            ["Cuir Onique", 300, 1],
+            ["Encre du Kralamoure géant", 281, 1],
+            ["Hamatum de Glourséleste", 254, 1],
+            ["Condyle de Fuji Givrefoux", 254, 1],
+            ["Étoffe de Kolosso", 254, 1],
+            ["Étoffe givrée", 254, 1],
+            ["Eclat temporel", 254, 1],
+            ["Fermeture éclair", 200, 1],
+            ["Mycoses gelées", 200, 1],
+            ["Oeil de verre", 200, 1],
+            ["Racine cristalline", 200, 1],
+            ["Boulon neuf", 200, 1],
+            ["Oeil de Korriandre", 196, 1],
+            ["Fragment d'Ougalurette", 195, 1],
+            ["Peau du Bworker", 195, 1],
+            ["Vertèbre d'Obsidiantre", 161, 1],
+            ["Cuir de Tengu Givrefoux", 153, 1]
         ];
 
         // Créer le tableau
         function createTable() {
             const tableBody = document.getElementById('tableBody');
-            
+
             resourcesData.forEach((row, index) => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -899,30 +205,69 @@
             const priceInput = document.querySelector(`#tableBody tr:nth-child(${index + 1}) .price-input`);
             const xpCell = document.getElementById(`xp-${index}`);
             const qtyCell = document.getElementById(`qty-${index}`);
-            
+
             const price = parseFloat(priceInput.value);
             const xp = resourcesData[index][1];
-            
+
             if (price && price > 0) {
                 const xpPerKama = xp / price;
                 const quantityFor180 = 80678 / xp;
-                
+
                 xpCell.textContent = xpPerKama.toFixed(4);
                 qtyCell.textContent = Math.ceil(quantityFor180).toLocaleString();
+
+                // Sauvegarder dans Firebase
+                const priceRef = firebase.database().ref('prices/' + index);
+                priceRef.set(price);
             } else {
                 xpCell.textContent = '-';
                 qtyCell.textContent = '-';
+
+                // Supprimer de Firebase
+                const priceRef = firebase.database().ref('prices/' + index);
+                priceRef.remove();
             }
+        }
+
+        // Écouter les changements de prix en temps réel
+        function listenToChanges() {
+            const pricesRef = firebase.database().ref('prices');
+            pricesRef.on('value', (snapshot) => {
+                const prices = snapshot.val();
+                if (prices) {
+                    Object.keys(prices).forEach(index => {
+                        const priceInput = document.querySelector(`#tableBody tr:nth-child(${parseInt(index) + 1}) .price-input`);
+                        const xpCell = document.getElementById(`xp-${index}`);
+                        const qtyCell = document.getElementById(`qty-${index}`);
+
+                        if (priceInput && priceInput.value != prices[index]) {
+                            priceInput.value = prices[index];
+
+                            const price = parseFloat(prices[index]);
+                            const xp = resourcesData[index][1];
+                            const xpPerKama = xp / price;
+                            const quantityFor180 = 80678 / xp;
+
+                            xpCell.textContent = xpPerKama.toFixed(4);
+                            qtyCell.textContent = Math.ceil(quantityFor180).toLocaleString();
+                        }
+                    });
+                }
+            });
         }
 
         // Effacer tous les prix
         function clearPrices() {
             if (confirm('Êtes-vous sûr de vouloir effacer tous les prix ?')) {
+                // Effacer dans Firebase
+                const pricesRef = firebase.database().ref('prices');
+                pricesRef.remove();
+
                 const inputs = document.querySelectorAll('.price-input');
                 inputs.forEach(input => {
                     input.value = '';
                 });
-                
+
                 // Effacer les calculs
                 resourcesData.forEach((_, index) => {
                     document.getElementById(`xp-${index}`).textContent = '-';
@@ -934,19 +279,19 @@
         // Télécharger en CSV
         function downloadCSV() {
             let csvContent = "Nom de la ressource,Quantité d'expérience,Prix,XP par Kama,Quantité pour 1-80\n";
-            
+
             resourcesData.forEach((row, index) => {
                 const priceInput = document.querySelector(`#tableBody tr:nth-child(${index + 1}) .price-input`);
                 const xpCell = document.getElementById(`xp-${index}`);
                 const qtyCell = document.getElementById(`qty-${index}`);
-                
+
                 const price = priceInput.value || '';
                 const xpPerKama = xpCell.textContent === '-' ? '' : xpCell.textContent;
                 const quantity = qtyCell.textContent === '-' ? '' : qtyCell.textContent.replace(/,/g, '');
-                
+
                 csvContent += `"${row[0]}",${row[1]},${price},${xpPerKama},${quantity}\n`;
             });
-            
+
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
@@ -963,28 +308,29 @@
             const data = [
                 ["Nom de la ressource", "Quantité d'expérience", "Prix", "XP par Kama", "Quantité pour 1-80"]
             ];
-            
+
             resourcesData.forEach((row, index) => {
                 const priceInput = document.querySelector(`#tableBody tr:nth-child(${index + 1}) .price-input`);
                 const xpCell = document.getElementById(`xp-${index}`);
                 const qtyCell = document.getElementById(`qty-${index}`);
-                
+
                 const price = priceInput.value ? parseFloat(priceInput.value) : '';
                 const xpPerKama = xpCell.textContent === '-' ? '' : parseFloat(xpCell.textContent);
                 const quantity = qtyCell.textContent === '-' ? '' : parseInt(qtyCell.textContent.replace(/,/g, ''));
-                
+
                 data.push([row[0], row[1], price, xpPerKama, quantity]);
             });
-            
+
             const ws = XLSX.utils.aoa_to_sheet(data);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Ressources Dofus XP");
             XLSX.writeFile(wb, "ressources_dofus_xp.xlsx");
         }
 
-        // Initialiser le tableau au chargement de la page
+        // Initialiser l'application
         window.onload = function() {
             createTable();
+            listenToChanges();
         };
     </script>
 </body>
